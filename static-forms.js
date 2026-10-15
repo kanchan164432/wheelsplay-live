@@ -1,8 +1,10 @@
 /* Static replacement for the Gravity Forms submit handler.
-   Submissions go to Web3Forms, which emails them to the address attached to the access key
-   (info@wheelsplay.in). If sending fails, the enquiry falls back to WhatsApp. */
+   Delivery order: FormSubmit (email to PRIMARY_EMAIL, copy to CC_EMAILS), then Web3Forms,
+   then WhatsApp if both fail. */
 (function () {
 	var ACCESS_KEY = '85264447-85c8-4c50-b20e-038bd2fc85e4';
+	var PRIMARY_EMAIL = 'spvats487@gmail.com';
+	var CC_EMAILS = 'info@wheelsplay.in';
 	var WHATSAPP_NUMBER = '919430965064';
 
 	function labelFor(f, el) {
@@ -35,14 +37,18 @@
 		var btn = f.querySelector('input[type=submit],button[type=submit]');
 		if (btn) btn.disabled = true;
 		notice(f, 'Sending...');
-		var data = { access_key: ACCESS_KEY, subject: 'WheelsPlay quote request', from_name: 'WheelsPlay website' };
-		rows.forEach(function (r) { data[r[0]] = r[1]; });
-		fetch('https://api.web3forms.com/submit', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify(data)
-		}).then(function (r) { return r.json(); }).then(function (j) {
-			if (!j.success) throw new Error(j.message || 'failed');
+		function post(url, data) {
+			return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) })
+				.then(function (r) { return r.json(); })
+				.then(function (j) { if (String(j.success) !== 'true') throw new Error(j.message || 'failed'); });
+		}
+		function fields(extra) { var d = extra; rows.forEach(function (r) { d[r[0]] = r[1]; }); return d; }
+		post('https://formsubmit.co/ajax/' + encodeURIComponent(PRIMARY_EMAIL),
+			fields({ _subject: 'WheelsPlay quote request', _template: 'table', _captcha: 'false', _cc: CC_EMAILS }))
+		.catch(function () {
+			return post('https://api.web3forms.com/submit',
+				fields({ access_key: ACCESS_KEY, subject: 'WheelsPlay quote request', from_name: 'WheelsPlay website' }));
+		}).then(function () {
 			notice(f, 'Thank you! We have received your request and will contact you shortly.');
 			f.reset();
 		}).catch(function () { whatsapp(f, rows); })
