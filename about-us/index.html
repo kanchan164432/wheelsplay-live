@@ -1757,47 +1757,6 @@ gform.initializeOnLoaded( function() {jQuery(document).trigger("gform_pre_post_r
 </script>
 
 <script src='../static-forms.js'></script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  const submitBtn = document.querySelector(".gform_button, input[type=submit], button[type=submit]");
-  if (!submitBtn) return;
-
-  const form = submitBtn.closest("form") || document.querySelector("form");
-  if (!form) return;
-
-  // Clear broken WordPress Gravity Form handlers
-  form.removeAttribute("onsubmit");
-  form.setAttribute("action", "https://api.web3forms.com/submit");
-  form.setAttribute("method", "POST");
-
-  // Inject hidden access key
-  let keyInput = form.querySelector("input[name=access_key]");
-  if (!keyInput) {
-    keyInput = document.createElement("input");
-    keyInput.type = "hidden";
-    keyInput.name = "access_key";
-    form.appendChild(keyInput);
-  }
-  keyInput.value = "85264447-85c8-4c50-b20e-038bd2fc85e4";
-
-  // Ensure readable field names for the email notification
-  const inputs = form.querySelectorAll("input, select, textarea");
-  inputs.forEach(input => {
-    const label = input.closest(".gfield")?.querySelector("label")?.innerText?.trim().toLowerCase() || "";
-    if (label.includes("name")) input.name = "Customer_Name";
-    else if (label.includes("phone")) input.name = "Phone_Number";
-    else if (label.includes("location")) input.name = "Service_Location";
-    else if (label.includes("model")) input.name = "Car_Model";
-    else if (label.includes("fuel")) input.name = "Fuel_Type";
-  });
-
-  form.addEventListener("submit", function(e) {
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Submitting...";
-  });
-});
-</script>
 </body>
 
 </html>
