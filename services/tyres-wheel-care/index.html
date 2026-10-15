@@ -1379,6 +1379,77 @@ gform.initializeOnLoaded( function() {jQuery(document).trigger("gform_pre_post_r
 </script>
 
 <script src='../../static-forms.js?v=4'></script>
+
+<!-- Web3Forms Static Integration -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const form = document.querySelector(".gform_wrapper form") || document.querySelector("form");
+  if (!form) return;
+
+  // Strip WordPress / Gravity Forms internal hooks
+  form.removeAttribute("onsubmit");
+  form.removeAttribute("action");
+  form.removeAttribute("target");
+
+  const oldBtn = form.querySelector(".gform_button, input[type=submit], button[type=submit]");
+  if (!oldBtn) return;
+
+  // Clone button to strip existing jQuery/GravityForm event listeners
+  const submitBtn = oldBtn.cloneNode(true);
+  oldBtn.parentNode.replaceChild(submitBtn, oldBtn);
+
+  submitBtn.addEventListener("click", async function(e) {
+    e.preventDefault();
+
+    // Map input fields to readable names for your email notification
+    const inputs = form.querySelectorAll("input, select, textarea");
+    inputs.forEach(input => {
+      const label = input.closest(".gfield")?.querySelector("label")?.innerText?.trim().toLowerCase() || "";
+      if (label.includes("name")) input.name = "Customer_Name";
+      else if (label.includes("phone")) input.name = "Phone_Number";
+      else if (label.includes("location")) input.name = "Service_Location";
+      else if (label.includes("model")) input.name = "Car_Model";
+      else if (label.includes("fuel")) input.name = "Fuel_Type";
+    });
+
+    const formData = new FormData(form);
+    formData.set("access_key", "85264447-85c8-4c50-b20e-038bd2fc85e4");
+    formData.set("subject", "New Quotation Request - WheelsPlay");
+    formData.set("from_name", "WheelsPlay Website");
+
+    submitBtn.disabled = true;
+    const originalText = submitBtn.value || submitBtn.innerText;
+    if (submitBtn.tagName === "INPUT") submitBtn.value = "Sending...";
+    else submitBtn.innerText = "Sending...";
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        alert("Thank you! Your quote request has been sent successfully.");
+        form.reset();
+        if (submitBtn.tagName === "INPUT") submitBtn.value = "Sent!";
+        else submitBtn.innerText = "Sent!";
+      } else {
+        alert("Submission failed: " + (result.message || "Please try again."));
+        submitBtn.disabled = false;
+        if (submitBtn.tagName === "INPUT") submitBtn.value = originalText;
+        else submitBtn.innerText = originalText;
+      }
+    } catch (error) {
+      alert("Network error. Please try again or contact us directly on WhatsApp.");
+      submitBtn.disabled = false;
+      if (submitBtn.tagName === "INPUT") submitBtn.value = originalText;
+      else submitBtn.innerText = originalText;
+    }
+  });
+});
+</script>
 </body>
+
 
 </html>
