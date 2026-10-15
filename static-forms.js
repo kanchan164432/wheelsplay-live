@@ -31,6 +31,12 @@
 		window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text), '_blank');
 		notice(f, 'We could not send your request by email, so WhatsApp is opening instead. You can also call 9430965064.');
 	}
+	// Never let these forms POST to the static host (it answers 405).
+	var nativeSubmit = HTMLFormElement.prototype.submit;
+	HTMLFormElement.prototype.submit = function () {
+		if (isGform(this)) { send(this); return; }
+		return nativeSubmit.apply(this, arguments);
+	};
 	function isGform(f) { return f && f.id && f.id.indexOf('gform_') === 0; }
 	function missingRequired(f) {
 		var bad = null;
