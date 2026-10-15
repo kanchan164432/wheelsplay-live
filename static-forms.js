@@ -1,8 +1,6 @@
 /* Static replacement for the Gravity Forms submit handler.
-   - Set WEB3FORMS_KEY (free key from https://web3forms.com) to deliver submissions by email.
-   - With no key, the enquiry is handed over to WhatsApp so no lead is lost. */
+   GitHub Pages has no server, so the enquiry is sent to WhatsApp with the details pre-filled. */
 (function () {
-	var WEB3FORMS_KEY = '';
 	var WHATSAPP_NUMBER = '919430965064';
 
 	function labelFor(f, el) {
@@ -26,18 +24,8 @@
 		var f = e.target;
 		if (!f.id || f.id.indexOf('gform_') !== 0) return;
 		e.preventDefault(); e.stopImmediatePropagation();
-		var rows = collect(f);
-		if (WEB3FORMS_KEY) {
-			var data = { access_key: WEB3FORMS_KEY, subject: 'WheelsPlay quote request' };
-			rows.forEach(function (r) { data[r[0]] = r[1]; });
-			fetch('https://api.web3forms.com/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) })
-				.then(function (r) { return r.json(); })
-				.then(function (j) { notice(f, j.success ? 'Thank you! We will contact you shortly.' : 'Could not send. Please call 9430965064.'); if (j.success) f.reset(); })
-				.catch(function () { notice(f, 'Could not send. Please call 9430965064.'); });
-		} else {
-			var text = 'Quote request from website:\n' + rows.map(function (r) { return r[0] + ': ' + r[1]; }).join('\n');
-			window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text), '_blank');
-			notice(f, 'Opening WhatsApp to send your request. You can also call 9430965064.');
-		}
+		var text = 'Quote request from website:\n' + collect(f).map(function (r) { return r[0] + ': ' + r[1]; }).join('\n');
+		window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text), '_blank');
+		notice(f, 'Opening WhatsApp to send your request. You can also call 9430965064.');
 	}, true);
 })();
