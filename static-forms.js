@@ -31,10 +31,30 @@
 		window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text), '_blank');
 		notice(f, 'We could not send your request by email, so WhatsApp is opening instead. You can also call 9430965064.');
 	}
-	document.addEventListener('submit', function (e) {
-		var f = e.target;
-		if (!f.id || f.id.indexOf('gform_') !== 0) return;
+	function isGform(f) { return f && f.id && f.id.indexOf('gform_') === 0; }
+	function missingRequired(f) {
+		var bad = null;
+		f.querySelectorAll('.gfield_contains_required input[name^="input_"],.gfield_contains_required select[name^="input_"],.gfield_contains_required textarea[name^="input_"]').forEach(function (el) {
+			if (!bad && el.type !== 'hidden' && !el.value.trim()) bad = el;
+		});
+		return bad;
+	}
+	// Gravity Forms' own button handler calls form.submit() directly, so intercept the click too.
+	document.addEventListener('click', function (e) {
+		var b = e.target.closest && e.target.closest('input[type=submit],button[type=submit]');
+		var f = b && b.form;
+		if (!isGform(f)) return;
 		e.preventDefault(); e.stopImmediatePropagation();
+		var bad = missingRequired(f);
+		if (bad) { notice(f, 'Please fill in all required fields.'); bad.focus(); return; }
+		send(f);
+	}, true);
+	document.addEventListener('submit', function (e) {
+		if (!isGform(e.target)) return;
+		e.preventDefault(); e.stopImmediatePropagation();
+		send(e.target);
+	}, true);
+	function send(f) {
 		var rows = collect(f);
 		notice(f, 'Sending...');
 		configPromise.then(function (emails) {
@@ -52,5 +72,5 @@
 			notice(f, 'Thank you! We have received your request and will contact you shortly.');
 			f.reset();
 		}).catch(function () { whatsapp(f, rows); });
-	}, true);
+	}
 })();
