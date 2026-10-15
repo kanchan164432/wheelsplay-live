@@ -1,8 +1,13 @@
 /* Static replacement for the Gravity Forms submit handler.
-   Emails the enquiry to RECIPIENT through FormSubmit; falls back to WhatsApp if sending fails. */
+   Emails are sent through FormSubmit to the recipients listed in form-config.json
+   (edit them at /form-admin/). If sending fails, the enquiry falls back to WhatsApp. */
 (function () {
-	var RECIPIENT = 'info@wheelsplay.in';
 	var WHATSAPP_NUMBER = '919430965064';
+	var base = document.currentScript.src.replace(/[^\/]*$/, '');
+	var configPromise = fetch(base + 'form-config.json', { cache: 'no-store' })
+		.then(function (r) { return r.json(); })
+		.then(function (c) { return (c.emails || []).filter(Boolean); })
+		.catch(function () { return []; });
 
 	function labelFor(f, el) {
 		var l = el.id && f.querySelector('label[for="' + el.id + '"]');
@@ -31,20 +36,21 @@
 		if (!f.id || f.id.indexOf('gform_') !== 0) return;
 		e.preventDefault(); e.stopImmediatePropagation();
 		var rows = collect(f);
-		var btn = f.querySelector('input[type=submit],button[type=submit]');
-		if (btn) btn.disabled = true;
 		notice(f, 'Sending...');
-		var data = { _subject: 'WheelsPlay quote request', _template: 'table', _captcha: 'false' };
-		rows.forEach(function (r) { data[r[0]] = r[1]; });
-		fetch('https://formsubmit.co/ajax/' + encodeURIComponent(RECIPIENT), {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify(data)
+		configPromise.then(function (emails) {
+			if (!emails.length) throw new Error('no recipients');
+			var data = { _subject: 'WheelsPlay quote request', _template: 'table', _captcha: 'false' };
+			if (emails.length > 1) data._cc = emails.slice(1).join(',');
+			rows.forEach(function (r) { data[r[0]] = r[1]; });
+			return fetch('https://formsubmit.co/ajax/' + encodeURIComponent(emails[0]), {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+				body: JSON.stringify(data)
+			});
 		}).then(function (r) { return r.json(); }).then(function (j) {
 			if (String(j.success) !== 'true') throw new Error(j.message || 'failed');
 			notice(f, 'Thank you! We have received your request and will contact you shortly.');
 			f.reset();
-		}).catch(function () { whatsapp(f, rows); })
-		.then(function () { if (btn) btn.disabled = false; });
+		}).catch(function () { whatsapp(f, rows); });
 	}, true);
 })();
