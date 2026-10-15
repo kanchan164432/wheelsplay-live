@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Blog admin - WheelsPlay</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,sans-serif;margin:0;background:#f3f3f3;color:#222}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px}h1{font-size:22px;margin:0 0 16px}h2{font-size:18px;margin:28px 0 10px}
+.card{background:#fff;border-radius:8px;padding:18px;box-shadow:0 1px 6px rgba(0,0,0,.1);margin-bottom:18px}
+label{display:block;font-weight:600;margin:14px 0 4px;font-size:14px}
+input[type=text],input[type=password],input[type=date],select,textarea{width:100%;padding:9px;border:1px solid #999;border-radius:4px;font:inherit}
+button{padding:9px 16px;border:0;border-radius:4px;background:#e60000;color:#fff;font-weight:700;cursor:pointer}button.sec{background:#555}button.lite{background:#ddd;color:#222;padding:6px 10px;font-weight:600}
+#editor{min-height:260px;border:1px solid #999;border-radius:0 0 4px 4px;padding:12px;background:#fff;overflow:auto}#editor:focus{outline:2px solid #e60000}
+.tb{display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:#eee;border:1px solid #999;border-bottom:0;border-radius:4px 4px 0 0}
+#html{display:none;min-height:260px;font-family:monospace;border-radius:0 0 4px 4px}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1;min-width:200px}
+.post{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee}.post span{flex:1}
+#msg{padding:10px;border:1px solid #888;background:#fff;margin:12px 0;display:none;border-radius:4px}small{color:#666}#prev{max-width:200px;margin-top:8px;border-radius:6px;display:none}
+</style></head><body><div class="wrap">
+<div id="gate" class="card" style="max-width:380px;margin:80px auto"><h1>Blog admin</h1>
+<label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password">
+<p><button id="login">Log in</button></p><div id="gmsg" style="color:#c00"></div></div>
+
+<div id="app" style="display:none">
+<h1>Blog admin <button class="lite" id="logout" style="float:right">Log out</button></h1>
+<div id="msg"></div>
+<div class="card"><label for="token">GitHub token</label>
+<input type="password" id="token" autocomplete="off" placeholder="Fine-grained token with Contents: read &amp; write on this repository">
+<small><label style="display:inline;font-weight:400"><input type="checkbox" id="remember"> Remember on this browser</label> &nbsp;Needed to publish, because the site is static and posts are saved to the GitHub repository.</small></div>
+
+<h2>Your posts</h2><div class="card" id="list">Loading...</div>
+
+<h2 id="etitle">New post</h2>
+<div class="card">
+<label for="title">Title</label><input type="text" id="title">
+<div class="row"><div><label for="date">Date</label><input type="date" id="date"></div>
+<div><label for="cat">Category</label><input type="text" id="cat" value="General Blogs"></div></div>
+<label for="img">Cover image</label>
+<select id="img"></select>
+<label style="font-weight:400;margin-top:8px">or upload a new image: <input type="file" id="file" accept="image/*"></label><img id="prev" alt="">
+<label for="exc">Short summary (shown on the blogs page)</label><textarea id="exc" rows="2"></textarea>
+<label>Article</label>
+<div class="tb"><button type="button" class="lite" data-c="bold"><b>B</b></button><button type="button" class="lite" data-c="italic"><i>I</i></button>
+<button type="button" class="lite" data-b="h2">Heading</button><button type="button" class="lite" data-b="h3">Subheading</button><button type="button" class="lite" data-b="p">Paragraph</button>
+<button type="button" class="lite" data-c="insertUnorderedList">&bull; List</button><button type="button" class="lite" data-c="insertOrderedList">1. List</button>
+<button type="button" class="lite" id="link">Link</button><button type="button" class="lite" id="tog">HTML</button></div>
+<div id="editor" contenteditable="true"></div><textarea id="html"></textarea>
+<p><button id="publish">Publish</button> <button class="sec" id="reset">Clear / new post</button></p>
+</div></div></div>
+
+<script>
+var HASH='fa81793e0c7d78385a5ff057c3968c7b66b16c87464d41f0867c7ebac5a01947', REPO='kanchan164432/wheelsplay-live', BRANCH='main', DATA='blog-data/posts.json';
+var IMAGES=['wp-content/uploads/2025/01/CAR-SERVICE-1-scaled.jpg','wp-content/uploads/2025/01/DENTING-1-scaled.jpg','wp-content/uploads/2025/01/WHEEL-CARE-1-scaled.jpg','wp-content/uploads/2023/06/CAR-WASH-1-scaled.jpg','wp-content/uploads/2023/06/AC-SERVICE-1-scaled.jpg','wp-content/uploads/2025/05/INURANCE-CLAIM-1-1-scaled.jpg','wp-content/uploads/2025/10/Gemini_Generated_Image_djpce7djpce7djpc-e1760186234147.png','wp-content/uploads/2025/10/Gemini_Generated_Image_qchxjpqchxjpqchx-e1760183486100.png','wp-content/uploads/2025/10/Gemini_Generated_Image_ugqbv1ugqbv1ugqb-1-e1760353469837-edited.png','wp-content/uploads/2025/10/Gemini_Generated_Image_dk16p9dk16p9dk16-e1760358883566.png','wp-content/uploads/2025/10/Gemini_Generated_Image_8k4q278k4q278k4q-e1760356329783.png','wp-content/uploads/2025/10/Gemini_Generated_Image_nkpdirnkpdirnkpd-e1760354675640.png'];
+var $=function(i){return document.getElementById(i)}, posts=[], editing=null, upload=null, htmlMode=false;
+function say(t,bad){var m=$('msg');m.style.display='block';m.style.borderColor=bad?'#c00':'#2a8a2a';m.textContent=t;scrollTo(0,0)}
+function sha(s){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)).then(function(b){return [].map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('')})}
+function unlock(){$('gate').style.display='none';$('app').style.display='block';init()}
+$('login').onclick=function(){sha($('pw').value).then(function(h){if(h===HASH){sessionStorage.setItem('wpAdmin','1');unlock()}else $('gmsg').textContent='Wrong password.'})};
+$('pw').onkeydown=function(e){if(e.key==='Enter')$('login').click()};
+$('logout').onclick=function(){sessionStorage.removeItem('wpAdmin');location.reload()};
+if(sessionStorage.getItem('wpAdmin')==='1')unlock();
+
+function b64(s){return btoa(unescape(encodeURIComponent(s)))}
+function gh(path,opt){opt=opt||{};opt.headers={Authorization:'Bearer '+$('token').value.trim(),Accept:'application/vnd.github+json'};
+ return fetch('https://api.github.com/repos/'+REPO+'/contents/'+path+(opt.method?'':'?ref='+BRANCH),opt).then(function(r){if(!r.ok)throw new Error('GitHub error '+r.status+(r.status===401||r.status===403||r.status===404?' - check the token has Contents read & write access to this repo.':''));return r.json()})}
+function slugify(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')}
+function init(){
+ $('token').value=localStorage.getItem('wpToken')||'';$('remember').checked=!!$('token').value;
+ $('img').innerHTML=IMAGES.map(function(p){return '<option value="'+p+'">'+p.split('/').pop()+'</option>'}).join('');
+ $('date').value=new Date().toISOString().slice(0,10);
+ fetch('../'+DATA,{cache:'no-store'}).then(function(r){return r.json()}).then(function(p){posts=p;renderList()});
+}
+function renderList(){
+ posts.sort(function(a,b){return b.date<a.date?-1:1});
+ $('list').innerHTML=posts.length?posts.map(function(p,i){return '<div class="post"><span><b>'+p.title.replace(/</g,'&lt;')+'</b><br><small>'+p.date+'</small></span><a href="../blog-post/index.html?p='+p.slug+'" target="_blank"><button class="lite" type="button">View</button></a><button class="lite" type="button" data-e="'+i+'">Edit</button><button class="lite" type="button" data-d="'+i+'">Delete</button></div>'}).join(''):'No posts yet.';
+}
+$('list').onclick=function(e){var t=e.target;
+ if(t.dataset.e!==undefined){var p=posts[+t.dataset.e];editing=p.slug;$('etitle').textContent='Edit post';$('title').value=p.title;$('date').value=p.date;$('cat').value=p.category||'';$('exc').value=p.excerpt||'';
+  if(IMAGES.indexOf(p.image)<0){IMAGES.push(p.image);$('img').innerHTML+='<option value="'+p.image+'">'+p.image.split('/').pop()+'</option>'}$('img').value=p.image;$('editor').innerHTML=p.html;setHtml(false);scrollTo(0,document.body.scrollHeight)}
+ if(t.dataset.d!==undefined){var q=posts[+t.dataset.d];if(confirm('Delete "'+q.title+'"?'))save(function(list){return list.filter(function(x){return x.slug!==q.slug})},'Delete post: '+q.title)}};
+document.querySelector('.tb').onclick=function(e){var c=e.target.dataset.c,b=e.target.dataset.b;$('editor').focus();if(c)document.execCommand(c);if(b)document.execCommand('formatBlock',false,b)};
+$('link').onclick=function(){var u=prompt('Link address (https://...)');if(u){$('editor').focus();document.execCommand('createLink',false,u)}};
+function setHtml(on){if(on&&!htmlMode){$('html').value=$('editor').innerHTML}if(!on&&htmlMode){$('editor').innerHTML=$('html').value}htmlMode=on;$('html').style.display=on?'block':'none';$('editor').style.display=on?'none':'block'}
+$('tog').onclick=function(){setHtml(!htmlMode)};
+$('file').onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){upload={name:slugify(f.name.replace(/\.[^.]+$/,''))+'-'+Date.now()+'.'+(f.name.split('.').pop().toLowerCase()),data:r.result.split(',')[1]};$('prev').src=r.result;$('prev').style.display='block'};r.readAsDataURL(f)};
+$('reset').onclick=function(){editing=null;upload=null;$('etitle').textContent='New post';['title','exc'].forEach(function(i){$(i).value=''});$('editor').innerHTML='';$('html').value='';$('prev').style.display='none';$('file').value=''};
+function save(mutate,message){
+ if(!$('token').value.trim())return say('Paste your GitHub token first.',true);
+ if($('remember').checked)localStorage.setItem('wpToken',$('token').value.trim());else localStorage.removeItem('wpToken');
+ say('Saving...');
+ return gh(DATA).then(function(f){var cur=JSON.parse(decodeURIComponent(escape(atob(f.content.replace(/\n/g,'')))));var next=mutate(cur);
+  return gh(DATA,{method:'PUT',body:JSON.stringify({message:message,branch:BRANCH,sha:f.sha,content:b64(JSON.stringify(next,null,1)+'\n')})}).then(function(){posts=next;renderList();$('reset').click();say('Saved. The live site updates in about a minute.')})})
+ .catch(function(e){say(e.message,true)});
+}
+$('publish').onclick=function(){
+ var title=$('title').value.trim(),html=(htmlMode?$('html').value:$('editor').innerHTML).trim();
+ if(!title||!html||html==='<br>')return say('Title and article text are required.',true);
+ var image=$('img').value,pre=Promise.resolve();
+ if(upload){var path='wp-content/uploads/blog/'+upload.name;image=path;pre=gh(path,{method:'PUT',body:JSON.stringify({message:'Add blog image',branch:BRANCH,content:upload.data})})}
+ pre.then(function(){var slug=editing||slugify(title);
+  var post={slug:slug,title:title,date:$('date').value,category:$('cat').value.trim()||'Blog',image:image,excerpt:$('exc').value.trim(),html:html};
+  return save(function(list){var i=list.findIndex(function(x){return x.slug===slug});if(i>=0)list[i]=post;else{if(list.some(function(x){return x.slug===slug}))slug+='-2';list.push(post)}return list},(editing?'Update':'Add')+' post: '+title)})
+ .catch(function(e){say(e.message,true)})};
+</script></body></html>
